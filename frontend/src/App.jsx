@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
 const BACKEND_URL = "http://localhost:8000";
@@ -49,6 +49,16 @@ export default function App() {
   function updateProfile(key, value) {
     setProfile((prev) => ({ ...prev, [key]: value }));
   }
+
+  useEffect(() => {
+    function onKeyDown(e) {
+      if (!(e.metaKey && e.key === "Enter")) return;
+      if (appState === STATE.READY)     startRecording();
+      if (appState === STATE.RECORDING) stopRecording();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [appState]);
 
   // ── Build a fresh MediaRecorder on the live stream ─────────────────────
   function initRecorder() {
