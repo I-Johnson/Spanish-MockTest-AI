@@ -47,6 +47,64 @@ header h1 span { color: #a78bfa; }
   color: #8880a0;
 }
 
+/* ── Mode picker ── */
+.mode-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1.1rem 1rem;
+  background: #18181f;
+  border: 1px solid #28283a;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: center;
+}
+
+.mode-card:hover { border-color: #4a3a6a; background: #1d1d28; }
+
+.mode-card.selected {
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.08);
+  box-shadow: 0 0 0 1px #7c3aed;
+}
+
+.mode-icon { font-size: 1.6rem; line-height: 1; }
+
+.mode-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #e8e8f0;
+}
+
+.mode-desc {
+  font-size: 0.75rem;
+  color: #6860a0;
+  line-height: 1.45;
+}
+
+.mode-card.selected .mode-desc { color: #9878d8; }
+
+/* ── Mode badge (shown during session) ── */
+.mode-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8870c8;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 999px;
+  padding: 0.18rem 0.6rem;
+  white-space: nowrap;
+}
+
 /* ── Profile card ── */
 .profile-card {
   background: #18181f;

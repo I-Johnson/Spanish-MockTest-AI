@@ -39,6 +39,7 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState("");
   const [audioURL, setAudioURL] = useState(null);
   const [profile, setProfile]   = useState(EMPTY_PROFILE);
+  const [mode, setMode]         = useState("screen"); // "screen" | "phone"
 
   const streamRef        = useRef(null);
   const recorderRef      = useRef(null);
@@ -81,22 +82,33 @@ export default function App() {
     historyRef.current = [];
 
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: {
-          suppressLocalAudioPlayback: false,
-          echoCancellation: false,
-          noiseSuppression: false,
-        },
-      });
+      let stream;
 
-      stream.getVideoTracks().forEach((t) => t.stop());
+      if (mode === "screen") {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true, // Chrome requires this; we drop the track immediately
+          audio: {
+            suppressLocalAudioPlayback: false,
+            echoCancellation: false,
+            noiseSuppression: false,
+          },
+        });
+        stream.getVideoTracks().forEach((t) => t.stop());
 
-      if (!stream.getAudioTracks().length) {
-        stream.getTracks().forEach((t) => t.stop());
-        setErrorMsg('No audio captured. Check "Share tab audio" in the Chrome picker.');
-        setAppState(STATE.ERROR);
-        return;
+        if (!stream.getAudioTracks().length) {
+          stream.getTracks().forEach((t) => t.stop());
+          setErrorMsg('No audio captured. Check "Share tab audio" in the Chrome picker.');
+          setAppState(STATE.ERROR);
+          return;
+        }
+      } else {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
+        });
       }
 
       stream.getAudioTracks()[0].onended = () => endSession();
@@ -106,9 +118,18 @@ export default function App() {
       initRecorder();
       setAppState(STATE.READY);
     } catch (err) {
-      const msg = err.name === "NotAllowedError"
-        ? "Tab sharing cancelled. Click 'Start Session' and pick your Zoom tab."
-        : `Could not start capture: ${err.message}`;
+      let msg;
+      if (mode === "screen") {
+        msg = err.name === "NotAllowedError"
+          ? "Tab sharing cancelled. Click 'Start Session' and pick your Zoom tab."
+          : `Could not start capture: ${err.message}`;
+      } else {
+        msg = err.name === "NotAllowedError"
+          ? "Microphone access denied. Please allow mic permissions and try again."
+          : err.name === "NotFoundError"
+          ? "No microphone found. Plug one in and try again."
+          : `Could not access microphone: ${err.message}`;
+      }
       setErrorMsg(msg);
       setAppState(STATE.ERROR);
     }
@@ -199,6 +220,28 @@ export default function App() {
       </header>
 
       <main>
+        {/* ── Source mode picker — visible before session starts ── */}
+        {appState === STATE.NO_SESSION && (
+          <div className="mode-picker">
+            <button
+              className={`mode-card${mode === "screen" ? " selected" : ""}`}
+              onClick={() => setMode("screen")}
+            >
+              <span className="mode-icon">🖥️</span>
+              <span className="mode-title">Online Call</span>
+              <span className="mode-desc">Zoom, Google Meet, etc.<br />Captures tab audio</span>
+            </button>
+            <button
+              className={`mode-card${mode === "phone" ? " selected" : ""}`}
+              onClick={() => setMode("phone")}
+            >
+              <span className="mode-icon">📱</span>
+              <span className="mode-title">Phone Call</span>
+              <span className="mode-desc">Speaker mode on desk<br />Captures microphone</span>
+            </button>
+          </div>
+        )}
+
         {/* ── Profile card — visible before session starts ── */}
         {appState === STATE.NO_SESSION && (
           <div className="profile-card">
@@ -236,14 +279,19 @@ export default function App() {
             <div className={`dot ${appState}`} />
             <span className="status-label">{STATUS_TEXT[appState]}</span>
             {inSession && (
+              <span className="mode-badge">
+                {mode === "screen" ? "🖥️ Screen audio" : "🎙️ Mic active"}
+              </span>
+            )}
+            {inSession && (
               <button className="btn-end-session" onClick={endSession}>
                 End Session
               </button>
             )}
           </div>
 
-          {/* ── Pre-session tip ── */}
-          {appState === STATE.NO_SESSION && (
+          {/* ── Pre-session tip (screen mode only) ── */}
+          {appState === STATE.NO_SESSION && mode === "screen" && (
             <div className="tab-audio-tip">
               Chrome will show a tab picker — select your <em>Zoom tab</em> and
               check <strong>"Share tab audio"</strong> before clicking Share.
